@@ -1,0 +1,12 @@
+# secrets & local config
+.env
+.claude/
+
+# local test vault: contains a real API key (plugin data.json) and personal recordings
+dev/
+
+# the Obsidian plugin lives in its own repo: obsidian-soniox-transcriber
+obsidian-plugin/
+
+.DS_Store
+node_modules/

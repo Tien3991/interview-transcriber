@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interview Transcriber</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Cg fill='white'%3E%3Crect x='7' y='12' width='3' height='8' rx='1.5'/%3E%3Crect x='12' y='8' width='3' height='16' rx='1.5'/%3E%3Crect x='17' y='11' width='3' height='10' rx='1.5'/%3E%3Crect x='22' y='14' width='3' height='4' rx='1.5'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="8" fill="var(--accent)"/>
+      <g fill="#fff">
+        <rect x="7" y="12" width="3" height="8" rx="1.5"/>
+        <rect x="12" y="8" width="3" height="16" rx="1.5"/>
+        <rect x="17" y="11" width="3" height="10" rx="1.5"/>
+        <rect x="22" y="14" width="3" height="4" rx="1.5"/>
+      </g>
+    </svg>
+    <div>
+      <h1>Interview Transcriber</h1>
+      <span class="powered">Soniox speech-to-text</span>
+    </div>
+  </div>
+  <button id="keyPill" class="key-pill" title="Soniox API key">
+    <span class="dot"></span><span id="keyPillText">API key</span>
+  </button>
+</header>
+
+<div id="keyArea" class="key-area" hidden>
+  <input id="keyInput" type="password" autocomplete="off" spellcheck="false"
+         placeholder="Paste your Soniox API key (console.soniox.com)">
+  <button id="keySave" class="primary small">Save</button>
+  <p class="key-note">Stored only in this browser and sent straight to your local server — never anywhere else.</p>
+</div>
+
+<main>
+
+  <section id="dropzone" class="dropzone" tabindex="0" aria-label="Drop an audio file to transcribe">
+    <input type="file" id="fileInput" accept=".mp3,.m4a,.wav,.flac,.ogg,.aac,.mp4,.mov,.webm,audio/*,video/*" hidden>
+    <svg class="drop-icon" viewBox="0 0 48 48" aria-hidden="true">
+      <circle cx="24" cy="24" r="23" fill="var(--accent-soft)"/>
+      <g stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none">
+        <path d="M24 30V15"/>
+        <path d="M17.5 21.5 24 15l6.5 6.5"/>
+        <path d="M14 33h20"/>
+      </g>
+    </svg>
+    <h2>Drop an audio file here</h2>
+    <p class="drop-sub">MP3 or M4A — or <button type="button" class="linklike" id="browseBtn">browse your files</button>.
+      You can attach the matching video after transcription.</p>
+    <div class="opts">
+      <label class="opt check">
+        <input type="checkbox" id="optDiarize" checked>
+        <span>Speaker labels</span>
+      </label>
+      <label class="opt">
+        <span>Language</span>
+        <select id="optLangs">
+          <option value="vi" selected>Vietnamese</option>
+          <option value="vi,en">Vietnamese + English</option>
+          <option value="en">English</option>
+          <option value="">Auto-detect</option>
+          <option value="th">Thai</option>
+          <option value="ms">Malay</option>
+          <option value="id">Indonesian</option>
+          <option value="zh">Chinese</option>
+        </select>
+      </label>
+    </div>
+    <div id="recentWrap" class="recent" hidden>
+      <h3>Recent sessions</h3>
+      <ul id="recentList"></ul>
+    </div>
+  </section>
+
+  <section id="workspace" hidden>
+
+    <div class="console">
+      <div class="filebar">
+        <div class="fileinfo">
+          <svg viewBox="0 0 20 20" aria-hidden="true" class="file-icon">
+            <path fill="var(--accent)" d="M10 2a1 1 0 0 1 1 1v10.27a3.5 3.5 0 1 1-2-.9V6.6L6 7.4v6.87a3.5 3.5 0 1 1-2-.9V6a1 1 0 0 1 .68-.95l4.5-1.5A1 1 0 0 1 10 2Z" opacity=".9"/>
+          </svg>
+          <div class="filetext">
+            <strong id="fileName">—</strong>
+            <span id="fileMeta" class="muted"></span>
+          </div>
+        </div>
+        <div class="filebar-actions">
+          <span id="statusChip" class="chip" hidden></span>
+          <button id="copyBtn" class="ghost" disabled>Copy</button>
+          <button id="downloadBtn" class="ghost" disabled>Download .txt</button>
+          <button id="newBtn" class="ghost">New file</button>
+        </div>
+      </div>
+
+      <div class="player">
+        <button id="playBtn" class="play-btn" aria-label="Play / pause (Space)">
+          <svg id="iconPlay" viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.54.84l10-6.5a1 1 0 0 0 0-1.68l-10-6.5A1 1 0 0 0 8 5.5Z"/></svg>
+          <svg id="iconPause" viewBox="0 0 24 24" hidden><rect x="6.5" y="5" width="4" height="14" rx="1.4"/><rect x="13.5" y="5" width="4" height="14" rx="1.4"/></svg>
+        </button>
+        <button id="back5" class="skip-btn" title="Back 5 s (←)">
+          <svg viewBox="0 0 24 24"><path d="M11.5 6 5 12l6.5 6v-4.7l6 4.7V6l-6 4.7V6Z"/></svg>
+        </button>
+        <button id="fwd5" class="skip-btn" title="Forward 5 s (→)">
+          <svg viewBox="0 0 24 24"><path d="M12.5 6 19 12l-6.5 6v-4.7l-6 4.7V6l6 4.7V6Z"/></svg>
+        </button>
+        <span id="curTime" class="time">0:00</span>
+        <input type="range" id="seek" min="0" max="1000" value="0" step="1" aria-label="Seek">
+        <span id="durTime" class="time">0:00</span>
+        <select id="speed" title="Playback speed" aria-label="Playback speed">
+          <option value="0.75">0.75×</option>
+          <option value="1" selected>1×</option>
+          <option value="1.25">1.25×</option>
+          <option value="1.5">1.5×</option>
+          <option value="1.75">1.75×</option>
+          <option value="2">2×</option>
+        </select>
+        <button id="followBtn" class="toggle on" title="Auto-scroll to the word being spoken">Follow</button>
+        <button id="addVideoBtn" class="toggle" hidden title="Attach the video of this recording — plays in sync, no re-transcription">＋ Video</button>
+      </div>
+
+      <div id="videoWrap" class="videowrap" hidden>
+        <video id="media" preload="metadata" playsinline></video>
+        <div class="video-tools">
+          <button id="vidReplace" title="Replace the video file">Replace</button>
+          <button id="vidRemove" title="Remove the video and go back to audio playback">Remove</button>
+          <button id="vidSize" title="Toggle video size">Size</button>
+          <button id="vidPip" title="Picture in picture">PiP</button>
+          <button id="vidFull" title="Fullscreen">⛶</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="reattach" class="reattach" hidden>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm-.9 4.5a.9.9 0 0 1 1.8 0v4.2a.9.9 0 0 1-1.8 0V6.5Zm.9 8.6a1.1 1.1 0 1 1 0-2.2 1.1 1.1 0 0 1 0 2.2Z"/></svg>
+      <span>The media for this session isn't stored — drop the original audio (or its video) anywhere on this page to re-attach playback. Transcript editing works meanwhile.</span>
+    </div>
+
+    <article id="transcript" class="transcript" aria-label="Transcript"></article>
+
+  </section>
+
+  <p class="hints">
+    <kbd>Space</kbd> play / pause &nbsp;·&nbsp; <kbd>←</kbd><kbd>→</kbd> ±5 s &nbsp;·&nbsp;
+    click a word to select, drag or shift-click for more &nbsp;·&nbsp;
+    <kbd>Enter</kbd> edit selection &nbsp;·&nbsp; double-click a word to jump the audio there
+  </p>
+
+</main>
+
+<div id="edittools" class="edittools" hidden>
+  <button id="etPlay" title="Play from the first selected word">
+    <svg viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.54.84l10-6.5a1 1 0 0 0 0-1.68l-10-6.5A1 1 0 0 0 8 5.5Z"/></svg>
+    Play
+  </button>
+  <button id="etEdit" title="Edit the selected words (Enter)">
+    <svg viewBox="0 0 24 24"><path d="M4 20h4.3L19.9 8.4a2 2 0 0 0 0-2.8l-1.5-1.5a2 2 0 0 0-2.8 0L4 15.7V20Zm3.5-2H6v-1.5l9.9-9.9 1.5 1.5L7.5 18Z"/></svg>
+    Edit
+  </button>
+  <button id="etRevert" hidden title="Restore the original words">
+    <svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8Z"/></svg>
+    Revert
+  </button>
+  <span id="etCount"></span>
+</div>
+
+<div id="toasts" aria-live="polite"></div>
+<input type="file" id="videoInput" accept="video/*,.mp4,.mov,.m4v,.webm,.mkv" hidden>
+
+<script src="sessions.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
