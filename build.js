@@ -13,6 +13,16 @@ const OUT = path.join(OUT_DIR, 'transcriber.html');
 
 const read = (f) => fs.readFileSync(path.join(PUB, f), 'utf8');
 
+// .env is never committed; DROPBOX_TOKEN from it is embedded into the build so
+// the published page can back up recordings/transcripts. Absent → feature off.
+try {
+  for (const line of fs.readFileSync(path.join(ROOT, '.env'), 'utf8').split('\n')) {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^(['"])(.*)\1$/, '$2');
+  }
+} catch {}
+const DBX = process.env.DROPBOX_TOKEN || '';
+
 let html = read('index.html');
 const css = read('style.css');
 const sessions = read('sessions.js');
@@ -28,7 +38,9 @@ const replaceOnce = (haystack, needle, replacement) => {
 
 html = replaceOnce(html, '<link rel="stylesheet" href="style.css">', `<style>\n${css}\n</style>`);
 html = replaceOnce(html, '<script src="sessions.js"></script>',
-  `<script>\nwindow.__DIRECT__ = true; // single-file build: browser talks to api.soniox.com directly\n${sessions}\n</script>`);
+  `<script>\nwindow.__DIRECT__ = true; // single-file build: browser talks to api.soniox.com directly\n`
+  + (DBX ? `window.__DBX_TOKEN__ = ${JSON.stringify(DBX)}; // Dropbox backup (from .env at build time)\n` : '')
+  + `${sessions}\n</script>`);
 html = replaceOnce(html, '<script src="app.js"></script>', `<script>\n${app}\n</script>`);
 
 // The microsites platform rejects HTML with relative asset references; only
@@ -46,4 +58,5 @@ if (!/^<!doctype html>/i.test(html)) {
 fs.mkdirSync(OUT_DIR, { recursive: true });
 fs.writeFileSync(OUT, html);
 console.log(`✓ built ${path.relative(ROOT, OUT)} — ${(html.length / 1024).toFixed(1)} KB, self-contained`);
+console.log(`  Dropbox backup: ${DBX ? 'token embedded from .env — do not commit this build' : 'no DROPBOX_TOKEN in .env — feature off in this build'}`);
 console.log('  Publish it with /publish-page in Slack (upload dist/transcriber.html).');

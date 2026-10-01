@@ -26,7 +26,27 @@ No dependencies either way — any Node 18+ builds/serves it.
 7. Click a speaker label to rename it everywhere; **Copy** / **Download .txt** export the
    edited transcript.
 
-Shortcuts: `Space` play/pause · `←` `→` ±5 s · `Enter` edit selection · `Esc` deselect.
+Shortcuts: `Space` play/pause · `←` `→` ±5 s · `Enter` edit selection · `Esc` deselect ·
+`L` loop the selection (A–B).
+
+## Review loop (A–B)
+
+Select words and hit **A–B** in the floating toolbar (or press `L`): the player docks to
+the selection — the seek bar spans **just that section**, the words are tinted in the
+transcript, and playback runs A→B and stops. The section bar offers **Play section**,
+**Loop**, a **gap** of silence before each repeat (live 0.1 s countdown), and ✕ to clear.
+More player niceties: a **volume** slider (persisted), a **cursor** lead field (highlight
+runs *x* s ahead/behind the audio — handy for shadowing), and the whole console (file name
++ controls) stays docked at the top while you scroll.
+
+## Dropbox backup (optional)
+
+With `DROPBOX_TOKEN` set in `.env`, every new recording and its finished transcript are
+also uploaded to `/interview-transcriber` in that Dropbox app's folder (auto-renamed,
+never overwriting; >150 MB files use chunked upload sessions). Failures only toast — they
+never block transcription. The token is **never committed**: the local server hands it to
+the page via `/api/config`, and `node build.js` embeds it into `dist/transcriber.html`
+from `.env` at build time — so treat a token-bearing build as a secret and don't commit it.
 
 ## Video
 

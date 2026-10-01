@@ -79,6 +79,7 @@
 
   <section id="workspace" hidden>
 
+    <div id="dockSentinel" aria-hidden="true"></div>
     <div class="console">
       <div class="filebar">
         <div class="fileinfo">
@@ -120,8 +121,28 @@
           <option value="1.75">1.75×</option>
           <option value="2">2×</option>
         </select>
+        <button id="muteBtn" class="skip-btn" title="Mute / unmute" aria-label="Mute / unmute">
+          <svg id="iconVol" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4.2V4.8L8 9H4Z"/><path d="M15.6 8.1a4.7 4.7 0 0 1 0 7.8l-1.05-1.55a2.8 2.8 0 0 0 0-4.7L15.6 8.1Z"/><path d="M17.9 5.4a8.2 8.2 0 0 1 0 13.2l-1.05-1.55a6.3 6.3 0 0 0 0-10.1L17.9 5.4Z"/></svg>
+          <svg id="iconMuted" viewBox="0 0 24 24" hidden><path d="M4 9v6h4l5 4.2V4.8L8 9H4Z"/><path d="m16.3 9.6 1.9 1.9 1.9-1.9 1.4 1.4-1.9 1.9 1.9 1.9-1.4 1.4-1.9-1.9-1.9 1.9-1.4-1.4 1.9-1.9-1.9-1.9 1.4-1.4Z"/></svg>
+        </button>
+        <input type="range" id="vol" min="0" max="100" value="100" step="1" aria-label="Volume">
         <button id="followBtn" class="toggle on" title="Auto-scroll to the word being spoken">Follow</button>
+        <label class="sync-off" title="Cursor lead — positive highlights ahead of the audio, negative behind">
+          cursor <input id="syncOff" type="number" step="0.1" min="-10" max="10" value="0" aria-label="Cursor lead in seconds"> s
+        </label>
         <button id="addVideoBtn" class="toggle" hidden title="Attach the video of this recording — plays in sync, no re-transcription">＋ Video</button>
+      </div>
+
+      <div id="loopBar" class="loopbar" hidden>
+        <span class="ab-pill">A–B</span>
+        <span id="loopRange">0:00 – 0:00</span>
+        <button id="loopPlayBtn" class="toggle" title="Play the section from its start">Play section</button>
+        <button id="loopToggleBtn" class="toggle" title="Repeat the section (L)">Loop</button>
+        <label class="loop-gap" title="Silence before each repeat">
+          gap <input id="loopGap" type="number" min="0" max="60" step="0.5" value="0" aria-label="Silence before each repeat, seconds"> s
+        </label>
+        <span id="loopStatus"></span>
+        <button id="loopClearBtn" class="toggle" title="Clear the section">✕</button>
       </div>
 
       <div id="videoWrap" class="videowrap" hidden>
@@ -148,7 +169,8 @@
   <p class="hints">
     <kbd>Space</kbd> play / pause &nbsp;·&nbsp; <kbd>←</kbd><kbd>→</kbd> ±5 s &nbsp;·&nbsp;
     click a word to select, drag or shift-click for more &nbsp;·&nbsp;
-    <kbd>Enter</kbd> edit selection &nbsp;·&nbsp; double-click a word to jump the audio there
+    <kbd>Enter</kbd> edit selection &nbsp;·&nbsp; <kbd>L</kbd> loop the selection (A–B) &nbsp;·&nbsp;
+    double-click a word to jump the audio there
   </p>
 
 </main>
@@ -157,6 +179,10 @@
   <button id="etPlay" title="Play from the first selected word">
     <svg viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.54.84l10-6.5a1 1 0 0 0 0-1.68l-10-6.5A1 1 0 0 0 8 5.5Z"/></svg>
     Play
+  </button>
+  <button id="etSection" title="Play only these words — set the A–B section (L to loop)">
+    <svg viewBox="0 0 24 24"><path d="M4 5h2.2v14H4V5Zm13.8 0H20v14h-2.2V5ZM9 8.6v6.8a1 1 0 0 0 1.53.85l5.4-3.4a1 1 0 0 0 0-1.7l-5.4-3.4A1 1 0 0 0 9 8.6Z"/></svg>
+    A–B
   </button>
   <button id="etEdit" title="Edit the selected words (Enter)">
     <svg viewBox="0 0 24 24"><path d="M4 20h4.3L19.9 8.4a2 2 0 0 0 0-2.8l-1.5-1.5a2 2 0 0 0-2.8 0L4 15.7V20Zm3.5-2H6v-1.5l9.9-9.9 1.5 1.5L7.5 18Z"/></svg>
