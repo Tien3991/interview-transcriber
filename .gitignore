@@ -10,3 +10,6 @@ obsidian-plugin/
 
 .DS_Store
 node_modules/
+
+# build artifact — regenerate with `node build.js` (may embed the local Dropbox token)
+dist/

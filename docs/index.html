@@ -664,6 +664,11 @@ button { font-family: var(--font-ui); cursor: pointer; }
 }
 
 </style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#4f46e5">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 </head>
 <body>
 
@@ -2793,6 +2798,11 @@ window.__loadTestFile = async (url) => {
   handleFile(new File([b], name, { type: b.type || 'audio/mp4' }));
 };
 
+</script>
+<script>
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+}
 </script>
 </body>
 </html>
