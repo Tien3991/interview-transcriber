@@ -241,7 +241,7 @@ button { font-family: var(--font-ui); cursor: pointer; }
 
 .console {
   position: sticky;
-  top: 10px;
+  top: 0;
   z-index: 40;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -249,6 +249,13 @@ button { font-family: var(--font-ui); cursor: pointer; }
   box-shadow: var(--shadow);
   margin-top: 8px;
 }
+/* docked at the top of the page while scrolled — flush and a bit tighter */
+.console.docked {
+  border-radius: 0 0 var(--radius) var(--radius);
+  border-top-color: transparent;
+}
+.console.docked .filebar { padding: 7px 18px; }
+.console.docked .player { padding: 8px 18px; }
 
 .filebar {
   display: flex;
@@ -292,7 +299,18 @@ button { font-family: var(--font-ui); cursor: pointer; }
 
 /* ---------- player ---------- */
 
-.player { display: flex; align-items: center; gap: 10px; padding: 12px 18px; }
+.player { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px 18px; }
+
+.sync-off {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12.5px; color: var(--muted);
+}
+.sync-off input {
+  width: 56px;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel); color: var(--ink);
+  font-size: 12.5px; padding: 4px 6px;
+}
 
 .play-btn {
   width: 46px; height: 46px; flex: none;
@@ -339,6 +357,56 @@ button { font-family: var(--font-ui); cursor: pointer; }
   width: 12px; height: 12px; border-radius: 50%;
   background: #fff; border: 2.5px solid var(--accent);
   cursor: grab;
+}
+/* while a section is set, the whole seek bar spans just A–B (no band needed) */
+
+/* ---------- A–B section bar ---------- */
+
+.loopbar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  padding: 0 18px 12px;
+  font-size: 12.5px; color: var(--muted);
+}
+.loopbar .ab-pill {
+  background: var(--accent-soft); color: var(--accent-deep);
+  font-size: 11px; font-weight: 700; letter-spacing: .4px;
+  border-radius: 6px; padding: 2px 7px;
+}
+#loopRange { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.loop-gap { display: flex; align-items: center; gap: 5px; }
+.loop-gap input {
+  width: 54px;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel); color: var(--ink);
+  font-size: 12.5px; padding: 4px 6px;
+}
+#loopStatus { font-variant-numeric: tabular-nums; min-width: 86px; }
+#loopClearBtn { margin-left: auto; }
+
+#vol {
+  --p: 100%;
+  width: 70px; flex: none;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--accent) var(--p), #e8e4dc var(--p));
+  outline: none;
+}
+#vol::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px; height: 11px; border-radius: 50%;
+  background: #fff; border: 2px solid var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+  cursor: grab;
+}
+#vol::-moz-range-thumb {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #fff; border: 2px solid var(--accent);
+  cursor: grab;
+}
+@media (max-width: 600px) {
+  #vol { width: 46px; } /* tight bar — keep the slider, just narrower */
 }
 
 #speed {
@@ -459,6 +527,7 @@ button { font-family: var(--font-ui); cursor: pointer; }
   transition: background .12s;
 }
 .word:hover { background: var(--hover); }
+.word.in-sec { background: var(--accent-soft); box-shadow: inset 0 -2px 0 #c7d2fe; } /* A–B section */
 .word.sel { background: var(--sel-bg); box-shadow: inset 0 0 0 1px var(--sel-ring); }
 .word.active { background: var(--amber-bg); }
 .word.edited { background: var(--red-bg); color: var(--red); box-shadow: inset 0 -1px 0 var(--red-line); }
@@ -595,6 +664,11 @@ button { font-family: var(--font-ui); cursor: pointer; }
 }
 
 </style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#4f46e5">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 </head>
 <body>
 
@@ -668,6 +742,7 @@ button { font-family: var(--font-ui); cursor: pointer; }
 
   <section id="workspace" hidden>
 
+    <div id="dockSentinel" aria-hidden="true"></div>
     <div class="console">
       <div class="filebar">
         <div class="fileinfo">
@@ -709,8 +784,28 @@ button { font-family: var(--font-ui); cursor: pointer; }
           <option value="1.75">1.75×</option>
           <option value="2">2×</option>
         </select>
+        <button id="muteBtn" class="skip-btn" title="Mute / unmute" aria-label="Mute / unmute">
+          <svg id="iconVol" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4.2V4.8L8 9H4Z"/><path d="M15.6 8.1a4.7 4.7 0 0 1 0 7.8l-1.05-1.55a2.8 2.8 0 0 0 0-4.7L15.6 8.1Z"/><path d="M17.9 5.4a8.2 8.2 0 0 1 0 13.2l-1.05-1.55a6.3 6.3 0 0 0 0-10.1L17.9 5.4Z"/></svg>
+          <svg id="iconMuted" viewBox="0 0 24 24" hidden><path d="M4 9v6h4l5 4.2V4.8L8 9H4Z"/><path d="m16.3 9.6 1.9 1.9 1.9-1.9 1.4 1.4-1.9 1.9 1.9 1.9-1.4 1.4-1.9-1.9-1.9 1.9-1.4-1.4 1.9-1.9-1.9-1.9 1.4-1.4Z"/></svg>
+        </button>
+        <input type="range" id="vol" min="0" max="100" value="100" step="1" aria-label="Volume">
         <button id="followBtn" class="toggle on" title="Auto-scroll to the word being spoken">Follow</button>
+        <label class="sync-off" title="Cursor lead — positive highlights ahead of the audio, negative behind">
+          cursor <input id="syncOff" type="number" step="0.1" min="-10" max="10" value="0" aria-label="Cursor lead in seconds"> s
+        </label>
         <button id="addVideoBtn" class="toggle" hidden title="Attach the video of this recording — plays in sync, no re-transcription">＋ Video</button>
+      </div>
+
+      <div id="loopBar" class="loopbar" hidden>
+        <span class="ab-pill">A–B</span>
+        <span id="loopRange">0:00 – 0:00</span>
+        <button id="loopPlayBtn" class="toggle" title="Play the section from its start">Play section</button>
+        <button id="loopToggleBtn" class="toggle" title="Repeat the section (L)">Loop</button>
+        <label class="loop-gap" title="Silence before each repeat">
+          gap <input id="loopGap" type="number" min="0" max="60" step="0.5" value="0" aria-label="Silence before each repeat, seconds"> s
+        </label>
+        <span id="loopStatus"></span>
+        <button id="loopClearBtn" class="toggle" title="Clear the section">✕</button>
       </div>
 
       <div id="videoWrap" class="videowrap" hidden>
@@ -737,7 +832,8 @@ button { font-family: var(--font-ui); cursor: pointer; }
   <p class="hints">
     <kbd>Space</kbd> play / pause &nbsp;·&nbsp; <kbd>←</kbd><kbd>→</kbd> ±5 s &nbsp;·&nbsp;
     click a word to select, drag or shift-click for more &nbsp;·&nbsp;
-    <kbd>Enter</kbd> edit selection &nbsp;·&nbsp; double-click a word to jump the audio there
+    <kbd>Enter</kbd> edit selection &nbsp;·&nbsp; <kbd>L</kbd> loop the selection (A–B) &nbsp;·&nbsp;
+    double-click a word to jump the audio there
   </p>
 
 </main>
@@ -746,6 +842,10 @@ button { font-family: var(--font-ui); cursor: pointer; }
   <button id="etPlay" title="Play from the first selected word">
     <svg viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.54.84l10-6.5a1 1 0 0 0 0-1.68l-10-6.5A1 1 0 0 0 8 5.5Z"/></svg>
     Play
+  </button>
+  <button id="etSection" title="Play only these words — set the A–B section (L to loop)">
+    <svg viewBox="0 0 24 24"><path d="M4 5h2.2v14H4V5Zm13.8 0H20v14h-2.2V5ZM9 8.6v6.8a1 1 0 0 0 1.53.85l5.4-3.4a1 1 0 0 0 0-1.7l-5.4-3.4A1 1 0 0 0 9 8.6Z"/></svg>
+    A–B
   </button>
   <button id="etEdit" title="Edit the selected words (Enter)">
     <svg viewBox="0 0 24 24"><path d="M4 20h4.3L19.9 8.4a2 2 0 0 0 0-2.8l-1.5-1.5a2 2 0 0 0-2.8 0L4 15.7V20Zm3.5-2H6v-1.5l9.9-9.9 1.5 1.5L7.5 18Z"/></svg>
@@ -885,6 +985,9 @@ const DIRECT_MODEL = 'stt-async-v5';
 
 const LS_KEY = 'soniox-transcriber:key';
 const LS_POS = 'soniox-transcriber:pos:';
+const LS_GAP = 'soniox-transcriber:loopgap';
+const LS_VOL = 'soniox-transcriber:vol';
+const LS_SYNC = 'soniox-transcriber:syncoff';
 
 // migrate the pre-namespacing key name
 try {
@@ -932,11 +1035,91 @@ const S = {
   videoName: null,
   videoSize: 0,
   videoPanelSize: 'md',
+  // A–B section playback
+  loopA: null,          // section start, seconds
+  loopB: null,          // section end, seconds
+  looping: false,       // repeat the section
+  loopGap: 0,           // silence before each repeat, seconds
+  loopOnce: false,      // a "play section" run — pause when B is reached
+  loopWaitTimer: null,  // pending silence gap between repeats
+  loopCountdown: null,  // 100 ms ticker painting the gap countdown
+  cursorOffset: 0,      // seconds the spoken-word highlight runs ahead (+) or behind (−)
 };
 
 /* ================= helpers ================= */
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/* ================= Dropbox backup =================
+   Every new recording and its finished transcript are also uploaded to Dropbox.
+   The access token is never committed: locally it comes from .env (DROPBOX_TOKEN)
+   via /api/config; the single-file build embeds it from .env at build time.
+   No token → the backup quietly stays off. */
+
+function dbxToken() {
+  return (typeof window.__DBX_TOKEN__ === 'string' && window.__DBX_TOKEN__)
+    || CFG.dropboxToken || '';
+}
+const DROPBOX_FOLDER = '/interview-transcriber';
+const DBX_SINGLE_MAX = 150 * 1024 * 1024; // Dropbox one-call upload limit
+const DBX_CHUNK = 48 * 1024 * 1024;
+
+// Dropbox-API-Arg travels in an HTTP header: non-ASCII (e.g. Vietnamese
+// filenames) must be \u-escaped
+function dbxArg(obj) {
+  return JSON.stringify(obj).replace(/[\u007f-\uffff]/g,
+    (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+}
+
+async function dbxContent(endpoint, apiArg, body) {
+  const r = await fetch('https://content.dropboxapi.com' + endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + dbxToken(),
+      'Dropbox-API-Arg': dbxArg(apiArg),
+      'Content-Type': 'application/octet-stream',
+    },
+    body,
+  });
+  if (!r.ok) {
+    let msg = 'HTTP ' + r.status;
+    try { msg = (await r.json()).error_summary || msg; } catch {}
+    if (r.status === 401) msg = 'access token expired or invalid';
+    throw new Error(msg);
+  }
+  return r.json();
+}
+
+async function dropboxUpload(name, data) {
+  const blob = typeof data === 'string'
+    ? new Blob([data], { type: 'text/plain;charset=utf-8' })
+    : data;
+  const path = `${DROPBOX_FOLDER}/${name}`;
+  const commit = { path, mode: 'add', autorename: true, mute: true };
+  if (blob.size <= DBX_SINGLE_MAX) {
+    return dbxContent('/2/files/upload', commit, blob);
+  }
+  // big recordings go through an upload session in 48 MB chunks
+  const first = blob.slice(0, DBX_CHUNK);
+  const { session_id } = await dbxContent('/2/files/upload_session/start', { close: false }, first);
+  let offset = first.size;
+  while (blob.size - offset > DBX_CHUNK) {
+    const part = blob.slice(offset, offset + DBX_CHUNK);
+    await dbxContent('/2/files/upload_session/append_v2',
+      { cursor: { session_id, offset }, close: false }, part);
+    offset += part.size;
+  }
+  return dbxContent('/2/files/upload_session/finish',
+    { cursor: { session_id, offset }, commit }, blob.slice(offset));
+}
+
+// fire-and-forget: a Dropbox hiccup must never break transcription
+function backupToDropbox(name, data, what) {
+  if (MOCK || !dbxToken()) return;
+  dropboxUpload(name, data)
+    .then((meta) => toast(`${what} saved to Dropbox as ${(meta && meta.name) || name}`))
+    .catch((e) => toast(`Dropbox: could not save ${what} — ${e.message}`, true));
+}
 
 function toast(msg, isErr) {
   const el = document.createElement('div');
@@ -1258,6 +1441,7 @@ function handleFile(file) {
   workspace.hidden = false;
   syncVideoUI();
 
+  backupToDropbox(file.name, file, 'Recording');
   startTranscription();
 }
 
@@ -1289,6 +1473,7 @@ function resetSession() {
   S.selected.clear();
   S.editGroups.clear();
   S.speakerNames.clear();
+  clearSection();
   lastActive = null;
   transcript.innerHTML = '';
   hideTools();
@@ -1509,6 +1694,8 @@ async function pollUntilDone() {
   renderTranscript(d.tokens || []);
   backend().cleanup(S.tid, S.fid);
   createSessionRecord();
+  backupToDropbox((S.fileName || 'transcript').replace(/\.[^.]+$/, '') + '.txt',
+    transcriptText(), 'Transcript');
 }
 
 function fail(msg) {
@@ -1924,12 +2111,70 @@ $('followBtn').addEventListener('click', () => {
   $('followBtn').classList.toggle('on', S.follow);
 });
 
+/* ---- volume ---- */
+
+function syncMuteIcon() {
+  const muted = media.muted || media.volume === 0;
+  $('iconVol').toggleAttribute('hidden', muted);
+  $('iconMuted').toggleAttribute('hidden', !muted);
+}
+
+function applyVolume(v, save) {
+  v = Math.max(0, Math.min(1, v));
+  media.volume = v;
+  if (v > 0) media.muted = false;
+  $('vol').value = Math.round(v * 100);
+  $('vol').style.setProperty('--p', Math.round(v * 100) + '%');
+  syncMuteIcon();
+  if (save) try { localStorage.setItem(LS_VOL, String(v)); } catch {}
+}
+
+$('vol').addEventListener('input', () => applyVolume($('vol').value / 100, true));
+$('muteBtn').addEventListener('click', () => {
+  media.muted = !media.muted;
+  syncMuteIcon();
+});
+media.addEventListener('volumechange', syncMuteIcon);
+try {
+  const v = Number(localStorage.getItem(LS_VOL));
+  if (isFinite(v) && v >= 0 && v <= 1 && localStorage.getItem(LS_VOL) != null) applyVolume(v, false);
+} catch {}
+
+/* ---- cursor lead: highlight runs ahead (+) or behind (−) the audio ---- */
+
+$('syncOff').addEventListener('change', () => {
+  const v = Math.max(-10, Math.min(10, Number($('syncOff').value) || 0));
+  $('syncOff').value = v;
+  S.cursorOffset = v;
+  try { localStorage.setItem(LS_SYNC, String(v)); } catch {}
+  updateActive();
+});
+try {
+  const v = Number(localStorage.getItem(LS_SYNC));
+  if (isFinite(v) && v >= -10 && v <= 10 && v !== 0) { S.cursorOffset = v; $('syncOff').value = v; }
+} catch {}
+
+/* ---- compact the console while it is docked at the top of the page ---- */
+
+try {
+  new IntersectionObserver(([e]) => {
+    document.querySelector('.console').classList.toggle('docked', !e.isIntersecting);
+  }).observe($('dockSentinel'));
+} catch {}
+
 seekBar.addEventListener('input', () => {
-  if (!isFinite(media.duration)) return;
-  media.currentTime = (seekBar.value / 1000) * media.duration;
+  const { a, b } = seekRange();
+  if (!(b > a)) return;
+  cancelLoopWait();
+  S.loopOnce = false;
+  media.currentTime = a + (seekBar.value / 1000) * (b - a);
 });
 
 media.addEventListener('play', () => {
+  if (S.loopWaitTimer) { // pressing play during the silence gap starts the repeat now
+    cancelLoopWait();
+    media.currentTime = S.loopA;
+  }
   setPlayIcon(true);
   if (!rafId) tickLoop();
 });
@@ -1940,12 +2185,13 @@ media.addEventListener('pause', () => {
   savePosition();
 });
 media.addEventListener('timeupdate', () => {
+  sectionTick(); // also covers background tabs, where rAF is throttled
   if (media.paused) { updateActive(); updatePlayerUI(); }
 });
 media.addEventListener('loadedmetadata', () => {
   // streaming containers (e.g. MediaRecorder webm) report Infinity — fall back to the transcript's duration
   const dur = isFinite(media.duration) && media.duration > 0 ? media.duration : S.savedDuration;
-  $('durTime').textContent = fmtTime(dur);
+  $('durTime').textContent = fmtTime(sectionActive() ? S.loopB : dur);
   if (!S.videoAttached) {
     if (isFinite(media.duration) && media.duration > 0) S.savedDuration = media.duration;
     if (S.fileSize) $('fileMeta').textContent = `${fmtSize(S.fileSize)} · ${fmtTime(dur)}`;
@@ -1953,6 +2199,7 @@ media.addEventListener('loadedmetadata', () => {
 });
 
 function tickLoop() {
+  sectionTick();
   updateActive();
   updatePlayerUI();
   if (Date.now() - S.lastPosSave > 3000) {
@@ -1964,8 +2211,9 @@ function tickLoop() {
 
 function updatePlayerUI() {
   $('curTime').textContent = fmtTime(media.currentTime);
-  if (isFinite(media.duration) && media.duration > 0) {
-    const frac = media.currentTime / media.duration;
+  const { a, b } = seekRange();
+  if (b > a) {
+    const frac = Math.min(1, Math.max(0, (media.currentTime - a) / (b - a)));
     seekBar.value = Math.round(frac * 1000);
     seekBar.style.setProperty('--p', (frac * 100).toFixed(2) + '%');
   }
@@ -1973,6 +2221,7 @@ function updatePlayerUI() {
 
 function seekTo(sec) {
   if (!media.src) return;
+  S.loopOnce = false; // a manual jump ends a one-shot section run
   const max = isFinite(media.duration) ? media.duration : sec;
   media.currentTime = Math.min(Math.max(0, sec), max);
   updateActive();
@@ -1983,7 +2232,7 @@ function seekTo(sec) {
 function updateActive() {
   if (!S.ready) return;
   ensureIndex();
-  const t = media.currentTime * 1000;
+  const t = (media.currentTime + S.cursorOffset) * 1000;
   let lo = 0, hi = S.times.length - 1, idx = -1;
   while (lo <= hi) {
     const m = (lo + hi) >> 1;
@@ -2010,6 +2259,118 @@ function updateActive() {
 
 ['wheel', 'touchmove'].forEach((ev) =>
   window.addEventListener(ev, () => { S.followPausedUntil = Date.now() + 4000; }, { passive: true }));
+
+/* ================= A–B section playback =================
+   Select words → "A–B" captures their time range. "Play section" plays A→B
+   once; Loop repeats it, optionally with a silence gap before each repeat. */
+
+function sectionActive() {
+  return S.loopA != null && S.loopB != null;
+}
+
+function cancelLoopWait() {
+  if (S.loopWaitTimer) { clearTimeout(S.loopWaitTimer); S.loopWaitTimer = null; }
+  if (S.loopCountdown) { clearInterval(S.loopCountdown); S.loopCountdown = null; }
+  $('loopStatus').textContent = '';
+}
+
+function setSection(a, b) {
+  cancelLoopWait();
+  S.loopA = a;
+  S.loopB = b;
+  $('loopBar').hidden = false;
+  $('loopRange').textContent = `${fmtTime(a)} – ${fmtTime(b)}`;
+  markSectionWords();
+  $('durTime').textContent = fmtTime(b); // the seek bar now spans A–B only
+  updatePlayerUI();
+}
+
+function clearSection() {
+  cancelLoopWait();
+  S.loopA = S.loopB = null;
+  S.looping = false;
+  S.loopOnce = false;
+  $('loopBar').hidden = true;
+  $('loopToggleBtn').classList.remove('on');
+  markSectionWords();
+  const dur = isFinite(media.duration) && media.duration > 0 ? media.duration : S.savedDuration;
+  $('durTime').textContent = fmtTime(dur);
+  updatePlayerUI();
+}
+
+// tint the words inside the section (cleared when no section is set)
+function markSectionWords() {
+  ensureIndex();
+  const on = sectionActive();
+  const aMs = on ? S.loopA * 1000 : 0, bMs = on ? S.loopB * 1000 : 0;
+  for (const el of S.wordEls) {
+    el.classList.toggle('in-sec', on && +el.dataset.s >= aMs && +el.dataset.s < bMs);
+  }
+}
+
+// the range the seek bar represents: the A–B section while set, else the file
+function seekRange() {
+  if (sectionActive()) return { a: S.loopA, b: S.loopB };
+  const dur = isFinite(media.duration) && media.duration > 0 ? media.duration : S.savedDuration || 0;
+  return { a: 0, b: dur };
+}
+
+function playSection() {
+  if (!sectionActive() || !media.src) return;
+  cancelLoopWait();
+  seekTo(S.loopA);
+  S.loopOnce = !S.looping; // without Loop, a section run stops at B
+  media.play().catch(() => {});
+}
+
+// runs on every playback tick: enforce the B boundary
+function sectionTick() {
+  if (!sectionActive() || S.loopWaitTimer || media.paused) return;
+  if (media.currentTime < S.loopB) return;
+  if (S.looping) {
+    if (S.loopGap > 0) {
+      media.pause();
+      const until = performance.now() + S.loopGap * 1000;
+      const paint = () => {
+        const left = Math.max(0, until - performance.now()) / 1000;
+        $('loopStatus').textContent = `repeats in ${left.toFixed(1)}s…`;
+      };
+      paint();
+      S.loopCountdown = setInterval(paint, 100);
+      S.loopWaitTimer = setTimeout(() => {
+        cancelLoopWait();
+        if (!sectionActive() || !S.looping) return;
+        media.currentTime = S.loopA;
+        media.play().catch(() => {});
+      }, S.loopGap * 1000);
+    } else {
+      media.currentTime = S.loopA;
+    }
+  } else if (S.loopOnce) {
+    S.loopOnce = false;
+    media.pause();
+    media.currentTime = S.loopB;
+  }
+}
+
+$('loopPlayBtn').addEventListener('click', playSection);
+$('loopToggleBtn').addEventListener('click', () => {
+  S.looping = !S.looping;
+  $('loopToggleBtn').classList.toggle('on', S.looping);
+  if (S.looping) S.loopOnce = false; // looping supersedes a one-shot run
+  else cancelLoopWait();             // also stops a pending repeat
+});
+$('loopClearBtn').addEventListener('click', clearSection);
+$('loopGap').addEventListener('change', () => {
+  const v = Math.max(0, Math.min(60, Number($('loopGap').value) || 0));
+  $('loopGap').value = v;
+  S.loopGap = v;
+  try { localStorage.setItem(LS_GAP, String(v)); } catch {}
+});
+try {
+  const g = Number(localStorage.getItem(LS_GAP));
+  if (isFinite(g) && g > 0) { S.loopGap = Math.min(60, g); $('loopGap').value = S.loopGap; }
+} catch {}
 
 /* ================= word selection ================= */
 
@@ -2148,6 +2509,22 @@ $('etPlay').addEventListener('click', () => {
   clearSel();
   hideTools();
   media.play();
+});
+
+$('etSection').addEventListener('click', () => {
+  const sel = orderedSelection();
+  if (!sel.length) return;
+  if (!media.src) {
+    if (S.needsAudio) toast('Drop the original audio or video file to enable playback', true);
+    return;
+  }
+  const a = Number(sel[0].dataset.s) / 1000;
+  const last = sel[sel.length - 1];
+  const b = Math.max(a + 0.2, Number(last.dataset.e || last.dataset.s) / 1000);
+  setSection(a, b);
+  clearSel();
+  hideTools();
+  playSection();
 });
 
 $('etEdit').addEventListener('click', beginEdit);
@@ -2368,6 +2745,15 @@ document.addEventListener('keydown', (e) => {
   } else if (e.key === 'Escape') {
     clearSel();
     hideTools();
+  } else if (e.key.toLowerCase() === 'l' && !e.metaKey && !e.ctrlKey) {
+    if (S.selected.size) { // loop the selected words
+      e.preventDefault();
+      if (!S.looping) $('loopToggleBtn').click();
+      $('etSection').click();
+    } else if (sectionActive()) {
+      e.preventDefault();
+      $('loopToggleBtn').click();
+    }
   } else if ((e.key === 'Enter' || e.key.toLowerCase() === 'e') && S.selected.size && !e.metaKey && !e.ctrlKey) {
     e.preventDefault();
     beginEdit();
@@ -2412,6 +2798,11 @@ window.__loadTestFile = async (url) => {
   handleFile(new File([b], name, { type: b.type || 'audio/mp4' }));
 };
 
+</script>
+<script>
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+}
 </script>
 </body>
 </html>

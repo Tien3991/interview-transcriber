@@ -26,7 +26,27 @@ No dependencies either way — any Node 18+ builds/serves it.
 7. Click a speaker label to rename it everywhere; **Copy** / **Download .txt** export the
    edited transcript.
 
-Shortcuts: `Space` play/pause · `←` `→` ±5 s · `Enter` edit selection · `Esc` deselect.
+Shortcuts: `Space` play/pause · `←` `→` ±5 s · `Enter` edit selection · `Esc` deselect ·
+`L` loop the selection (A–B).
+
+## Review loop (A–B)
+
+Select words and hit **A–B** in the floating toolbar (or press `L`): the player docks to
+the selection — the seek bar spans **just that section**, the words are tinted in the
+transcript, and playback runs A→B and stops. The section bar offers **Play section**,
+**Loop**, a **gap** of silence before each repeat (live 0.1 s countdown), and ✕ to clear.
+More player niceties: a **volume** slider (persisted), a **cursor** lead field (highlight
+runs *x* s ahead/behind the audio — handy for shadowing), and the whole console (file name
++ controls) stays docked at the top while you scroll.
+
+## Dropbox backup (optional)
+
+With `DROPBOX_TOKEN` set in `.env`, every new recording and its finished transcript are
+also uploaded to `/interview-transcriber` in that Dropbox app's folder (auto-renamed,
+never overwriting; >150 MB files use chunked upload sessions). Failures only toast — they
+never block transcription. The token is **never committed**: the local server hands it to
+the page via `/api/config`, and `node build.js` embeds it into `dist/transcriber.html`
+from `.env` at build time — so treat a token-bearing build as a secret and don't commit it.
 
 ## Video
 
@@ -62,7 +82,18 @@ node build.js        # → dist/transcriber.html (single self-contained file)
 Then `/publish-page` in Slack and upload `dist/transcriber.html`. The build flips the app
 into **direct mode**: the browser calls `api.soniox.com` itself (CORS is open), so no
 server is involved. Upload → transcribe → the file and transcription are deleted from
-Soniox storage as soon as the tokens arrive.
+Soniox storage as soon as the tokens arrive. (`dist/` is a gitignored build artifact —
+it may embed your local Dropbox token, so it must never be committed.)
+
+## PWA (GitHub Pages)
+
+`node build.js` also emits **`docs/`** — the same app as an installable PWA: web app
+manifest, service worker, icons (regenerate them with `node make-icons.js`). Serve
+`docs/` on GitHub Pages or any static host and use the browser's **Install app**: the
+shell opens offline (saved sessions included; transcription itself needs the network),
+loads are instant from cache, and updates arrive on the next visit. This bundle **never
+embeds the Dropbox token** — it targets a public host. Paste the Soniox key in the
+header, same as the microsite.
 
 **Shared-origin caveat:** all internal microsites share one browser origin, so the saved
 API key, transcripts, and audio stored by this app are technically readable by JavaScript

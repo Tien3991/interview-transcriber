@@ -99,7 +99,11 @@ async function api(req, res, url) {
   const seg = url.pathname.split('/').filter(Boolean); // ['api', ...]
 
   if (req.method === 'GET' && url.pathname === '/api/config') {
-    return send(res, 200, { hasServerKey: !!process.env.SONIOX_API_KEY, model: MODEL });
+    return send(res, 200, {
+      hasServerKey: !!process.env.SONIOX_API_KEY,
+      model: MODEL,
+      dropboxToken: process.env.DROPBOX_TOKEN || '', // backups stay off without it
+    });
   }
 
   if (req.method === 'POST' && url.pathname === '/api/transcribe') {
